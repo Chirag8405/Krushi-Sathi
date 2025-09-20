@@ -1,0 +1,56 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+.config/
+!.env
+
+# Database files
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment files (except template)
+.env.local
+.env.production
+.env.staging
+.env.netlify
+
+# Keep the main .env for development
+# !.env
+
+# Deployment files
+.netlify/
+.vercel/
+
+# PM2 logs
+logs/
+pids/
+*.pid
+*.seed
+*.log
+
+# Docker
+.dockerignore
