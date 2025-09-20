@@ -76,11 +76,17 @@ Keep advice practical, safe, and suitable for small-scale farmers. Focus on orga
 
       let prompt = systemPrompt + "\n\nFarmer's question: " + safeQuestion;
       
+      // Create a timeout promise for AI requests (8 seconds to leave buffer for Netlify's 10s limit)
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('AI request timeout')), 8000);
+      });
+      
       // Handle image if provided
+      let aiPromise: Promise<any>;
       if (imageBase64) {
         // Remove data URL prefix if present
         const base64Data = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
-        const result = await model.generateContent([
+        aiPromise = model.generateContent([
           { text: prompt + "\n\nPlease also analyze the attached image of the crop/farm." },
           {
             inlineData: {
@@ -89,52 +95,33 @@ Keep advice practical, safe, and suitable for small-scale farmers. Focus on orga
             }
           } as any
         ]);
-        const aiResponse = result.response.text();
-        
-        // Try to parse AI response as JSON, fallback to template if parsing fails
-        try {
-          const parsedResponse = JSON.parse(aiResponse);
-          response = {
-            title: parsedResponse.title || titles[lang] || titles.en,
-            text: parsedResponse.text || `${safeQuestion ? `Question: ${safeQuestion}. ` : ""}${intro[lang] || intro.en}`,
-            steps: parsedResponse.steps || stepsMap[lang] || stepsMap.en,
-            lang,
-            source: "ai",
-          };
-        } catch (parseError) {
-          // If AI response isn't valid JSON, create a response with AI text
-          response = {
-            title: titles[lang] || titles.en,
-            text: aiResponse,
-            steps: stepsMap[lang] || stepsMap.en,
-            lang,
-            source: "ai",
-          };
-        }
       } else {
-        const result = await model.generateContent([{ text: prompt }]);
-        const aiResponse = result.response.text();
-        
-        // Try to parse AI response as JSON, fallback to template if parsing fails
-        try {
-          const parsedResponse = JSON.parse(aiResponse);
-          response = {
-            title: parsedResponse.title || titles[lang] || titles.en,
-            text: parsedResponse.text || `${safeQuestion ? `Question: ${safeQuestion}. ` : ""}${intro[lang] || intro.en}`,
-            steps: parsedResponse.steps || stepsMap[lang] || stepsMap.en,
-            lang,
-            source: "ai",
-          };
-        } catch (parseError) {
-          // If AI response isn't valid JSON, create a response with AI text
-          response = {
-            title: titles[lang] || titles.en,
-            text: aiResponse,
-            steps: stepsMap[lang] || stepsMap.en,
-            lang,
-            source: "ai",
-          };
-        }
+        aiPromise = model.generateContent([{ text: prompt }]);
+      }
+
+      // Race between AI request and timeout
+      const aiResult = await Promise.race([aiPromise, timeoutPromise]) as any;
+      const aiResponse = aiResult.response.text();
+      
+      // Try to parse AI response as JSON, fallback to template if parsing fails
+      try {
+        const parsedResponse = JSON.parse(aiResponse);
+        response = {
+          title: parsedResponse.title || titles[lang] || titles.en,
+          text: parsedResponse.text || `${safeQuestion ? `Question: ${safeQuestion}. ` : ""}${intro[lang] || intro.en}`,
+          steps: parsedResponse.steps || stepsMap[lang] || stepsMap.en,
+          lang,
+          source: "ai",
+        };
+      } catch (parseError) {
+        // If AI response isn't valid JSON, create a response with AI text
+        response = {
+          title: titles[lang] || titles.en,
+          text: aiResponse,
+          steps: stepsMap[lang] || stepsMap.en,
+          lang,
+          source: "ai",
+        };
       }
     } catch (error) {
       console.error('AI generation failed:', error);
