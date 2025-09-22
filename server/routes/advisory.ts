@@ -69,20 +69,19 @@ export const postAdvisory: RequestHandler = async (req, res) => {
       });
 
       // Create simplified system prompt for faster response
-      const systemPrompt = `You are an agricultural expert. Answer in ${lang === 'en' ? 'English' : 'the local language'}. 
+const systemPrompt = `You are an expert agricultural advisor. Provide practical, actionable advice for farmers in ${lang === 'en' ? 'English' : 'the local language'}. 
+      
+Format your response as a JSON object with:
+- title: A brief title for the advisory
+- text: A detailed explanation of the issue and solution
+- steps: An array of 3-4 specific action steps
+- lang: "${lang}"
+- source: "ai"
 
-Respond as JSON with:
-{
-  "title": "Brief advisory title",
-  "text": "Practical farming advice", 
-  "steps": ["step1", "step2", "step3"],
-  "lang": "${lang}",
-  "source": "ai"
-}
-
-Keep it concise and practical.`;
+Keep advice practical, safe, and suitable for small-scale farmers. Focus on organic and sustainable methods when possible.`;
 
       let prompt = systemPrompt + "\n\nFarmer's question: " + safeQuestion;
+
       
       // Create a timeout promise for AI requests (15 seconds for better reliability)
       const timeoutPromise = new Promise((_, reject) => {
