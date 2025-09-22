@@ -58,27 +58,35 @@ export const postAdvisory: RequestHandler = async (req, res) => {
   let response: AdvisoryResponse;
   if (useAI) {
     try {
-      // Initialize Google Gemini AI
+      // Initialize Google Gemini AI with configuration
       const genAI = new GoogleGenerativeAI(process.env.AI_API_KEY!);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1024,
+        },
+      });
 
-      // Create system prompt based on language
-      const systemPrompt = `You are an expert agricultural advisor. Provide practical, actionable advice for farmers in ${lang === 'en' ? 'English' : 'the local language'}. 
-      
-Format your response as a JSON object with:
-- title: A brief title for the advisory
-- text: A detailed explanation of the issue and solution
-- steps: An array of 3-4 specific action steps
-- lang: "${lang}"
-- source: "ai"
+      // Create simplified system prompt for faster response
+      const systemPrompt = `You are an agricultural expert. Answer in ${lang === 'en' ? 'English' : 'the local language'}. 
 
-Keep advice practical, safe, and suitable for small-scale farmers. Focus on organic and sustainable methods when possible.`;
+Respond as JSON with:
+{
+  "title": "Brief advisory title",
+  "text": "Practical farming advice", 
+  "steps": ["step1", "step2", "step3"],
+  "lang": "${lang}",
+  "source": "ai"
+}
+
+Keep it concise and practical.`;
 
       let prompt = systemPrompt + "\n\nFarmer's question: " + safeQuestion;
       
-      // Create a timeout promise for AI requests (8 seconds to leave buffer for Netlify's 10s limit)
+      // Create a timeout promise for AI requests (15 seconds for better reliability)
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('AI request timeout')), 8000);
+        setTimeout(() => reject(new Error('AI request timeout')), 15000);
       });
       
       // Handle image if provided
@@ -114,10 +122,37 @@ Keep advice practical, safe, and suitable for small-scale farmers. Focus on orga
           source: "ai",
         };
       } catch (parseError) {
-        // If AI response isn't valid JSON, create a response with AI text
+        // If AI response isn't valid JSON, clean and format the AI text
+        let cleanText = aiResponse;
+        
+        // Try to extract meaningful content if it looks like JSON
+        if (aiResponse.includes('{') && aiResponse.includes('}')) {
+          try {
+            // Attempt to extract text from malformed JSON
+            const textMatch = aiResponse.match(/"text"\s*:\s*"([^"]+)"/);
+            if (textMatch) {
+              cleanText = textMatch[1];
+            } else {
+              // Fallback: clean up JSON-like formatting
+              cleanText = aiResponse
+                .replace(/[{}"]/g, '')
+                .replace(/title\s*:\s*/gi, '')
+                .replace(/text\s*:\s*/gi, '')
+                .replace(/steps\s*:\s*/gi, '')
+                .replace(/lang\s*:\s*/gi, '')
+                .replace(/source\s*:\s*/gi, '')
+                .replace(/,\s*$/gm, '')
+                .trim();
+            }
+          } catch {
+            // If all else fails, use the original response but clean it up
+            cleanText = aiResponse.replace(/[{}"[\]]/g, '').trim();
+          }
+        }
+        
         response = {
           title: titles[lang] || titles.en,
-          text: aiResponse,
+          text: cleanText || `${safeQuestion ? `Question: ${safeQuestion}. ` : ""}${intro[lang] || intro.en}`,
           steps: stepsMap[lang] || stepsMap.en,
           lang,
           source: "ai",
