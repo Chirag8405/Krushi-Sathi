@@ -63,26 +63,100 @@ export const postAdvisory: RequestHandler = async (req, res) => {
       const model = genAI.getGenerativeModel({ 
         model: "gemini-1.5-flash",
         generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1024,
+          temperature: 0.8, // Slightly higher for more engaging responses
+          maxOutputTokens: 2500, // Increased for structured, engaging content
         },
       });
 
-      // Create simplified system prompt for faster response
-      const systemPrompt = `You are an agricultural expert. Answer in ${lang === 'en' ? 'English' : 'the local language'}. 
+      // Create comprehensive system prompt for engaging agricultural advice
+const systemPrompt = `You are Dr. Krishi, a friendly and experienced agricultural expert with 25+ years of field experience across Indian farming systems. Provide engaging, easy-to-understand advice for farmers in ${lang === 'en' ? 'English' : 'the local language'}.
 
-Respond as JSON with:
+IMPORTANT: You must respond ONLY with a valid JSON object. Do not include any explanatory text before or after the JSON. Do not wrap the JSON in markdown code blocks. Your entire response must be this exact format:
 {
-  "title": "Brief advisory title",
-  "text": "Practical farming advice", 
-  "steps": ["step1", "step2", "step3"],
+  "title": "Brief, actionable title (max 60 characters)",
+  "text": "Engaging, step-wise explanation written in conversational style with clear sections and bullet points",
+  "steps": ["Step 1: Clear action with timing", "Step 2: Specific treatment method", "Step 3: Monitoring technique", "Step 4: Prevention strategy"],
   "lang": "${lang}",
   "source": "ai"
 }
 
-Keep it concise and practical.`;
+WRITING STYLE for the "text" field:
+- Use conversational, friendly tone like talking to a friend
+- Break content into clear sections with headings like "🔍 What's happening:", "💡 Why this occurs:", "🛠️ Solution approach:"
+- Use bullet points and numbered lists within the text
+- Include emojis sparingly for visual appeal
+- Keep sentences short and clear
+- Use local farming terminology farmers understand
+- Add encouraging phrases like "Don't worry, this is fixable!" or "Many farmers face this"
 
-      let prompt = systemPrompt + "\n\nFarmer's question: " + safeQuestion;
+CONTENT STRUCTURE for the "text" field:
+🔍 **Problem Identification:**
+- Acknowledge the farmer's concern warmly
+- Clearly identify what's happening
+
+💡 **Root Cause:**
+- Explain why this happens in simple terms
+- Mention common triggers (weather, season, etc.)
+
+🛠️ **Treatment Options:**
+1. **Organic solution** (preferred, cost-effective)
+2. **Alternative method** (if organic doesn't work)
+3. **Chemical backup** (last resort)
+
+⏰ **Best Timing:**
+- When to apply treatments
+- Time of day considerations
+
+🔍 **How to Monitor:**
+- Signs of improvement to watch for
+- Warning signs of worsening
+
+🛡️ **Prevention Tips:**
+- How to avoid this in future
+- Seasonal preparation advice
+
+Guidelines for your response:
+✓ Write like you're talking to a neighbor farmer over tea
+✓ Use simple, practical language that any farmer can understand
+✓ Focus on solutions that work with limited resources
+✓ Include cost estimates when possible (₹50-100 range preferred)
+✓ Mention locally available materials (neem, turmeric, cow dung, etc.)
+✓ Give specific timings (early morning, after sunset, etc.)
+✓ Add encouraging words and confidence boosters
+✓ Keep everything practical and actionable
+✓ Use bullet points and clear sections within the text
+✓ Include both quick fixes and long-term solutions
+
+STEPS field guidelines:
+- Each step should be ONE specific action
+- Include timing/frequency in each step
+- Start with the most urgent action
+- End with prevention for next season
+- Use action verbs: "Mix", "Apply", "Check", "Spray"
+- Be specific about quantities and timing
+
+Make your advice:
+✓ Practical and implementable for small-scale farmers
+✓ Focused on sustainable and organic methods first
+✓ Include both immediate and long-term solutions
+✓ Culturally appropriate for Indian farming practices
+✓ Cost-effective using locally available materials when possible
+✓ Safe for farmers, crops, and environment
+
+Remember: Farmers rely on this advice for their livelihood. Be thorough, accurate, and compassionate.`;
+
+      let prompt = systemPrompt + `
+
+FARMER'S QUESTION: "${safeQuestion}"
+
+CONTEXT:
+- Location: Indian agricultural context
+- Farmer Type: Small to medium scale farming
+- Language Preference: ${lang === 'en' ? 'English' : 'Local Indian language'}
+- Season: Consider current season in India (September - post-monsoon/kharif season)
+
+Please provide your detailed agricultural advisory in the JSON format specified above.`;
+
       
       // Create a timeout promise for AI requests (15 seconds for better reliability)
       const timeoutPromise = new Promise((_, reject) => {
@@ -95,7 +169,18 @@ Keep it concise and practical.`;
         // Remove data URL prefix if present
         const base64Data = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
         aiPromise = model.generateContent([
-          { text: prompt + "\n\nPlease also analyze the attached image of the crop/farm." },
+          { text: prompt + `
+
+IMAGE ANALYSIS REQUIRED:
+The farmer has uploaded an image of their crop/farm. Please:
+1. Carefully analyze the image for signs of disease, pests, nutrient deficiency, or other issues
+2. Identify the crop type if possible
+3. Note any visible symptoms (leaf discoloration, spots, wilting, insect damage, etc.)
+4. Assess the overall plant health and growing conditions
+5. Provide specific advice based on what you observe in the image
+6. Include image-specific recommendations in your detailed response
+
+Combine your image analysis with the farmer's question to provide the most accurate and helpful advice.` },
           {
             inlineData: {
               mimeType: "image/jpeg",
@@ -109,57 +194,107 @@ Keep it concise and practical.`;
 
       // Race between AI request and timeout
       const aiResult = await Promise.race([aiPromise, timeoutPromise]) as any;
-      const aiResponse = aiResult.response.text();
+      let aiResponse = aiResult.response.text();
+      
+      console.log('Raw AI Response:', aiResponse); // Debug log
+      
+      // Clean the response if it has markdown formatting
+      aiResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       
       // Try to parse AI response as JSON, fallback to template if parsing fails
       try {
         const parsedResponse = JSON.parse(aiResponse);
-        response = {
-          title: parsedResponse.title || titles[lang] || titles.en,
-          text: parsedResponse.text || `${safeQuestion ? `Question: ${safeQuestion}. ` : ""}${intro[lang] || intro.en}`,
-          steps: parsedResponse.steps || stepsMap[lang] || stepsMap.en,
-          lang,
-          source: "ai",
-        };
-      } catch (parseError) {
-        // If AI response isn't valid JSON, clean and format the AI text
-        let cleanText = aiResponse;
         
-        // Try to extract meaningful content if it looks like JSON
-        if (aiResponse.includes('{') && aiResponse.includes('}')) {
+        // Validate that we have the required fields from AI
+        if (parsedResponse.title && parsedResponse.text && parsedResponse.steps && Array.isArray(parsedResponse.steps)) {
+          response = {
+            title: parsedResponse.title,
+            text: parsedResponse.text,
+            steps: parsedResponse.steps,
+            lang,
+            source: "ai",
+          };
+        } else {
+          // Missing required fields, use template with AI text if available
+          response = {
+            title: parsedResponse.title || titles[lang] || titles.en,
+            text: parsedResponse.text || `${safeQuestion ? `Question: ${safeQuestion}. ` : ""}${intro[lang] || intro.en}`,
+            steps: parsedResponse.steps || stepsMap[lang] || stepsMap.en,
+            lang,
+            source: "ai",
+          };
+        }
+      } catch (parseError) {
+        console.log('JSON Parse Error:', parseError); // Debug log
+        console.log('Attempting JSON extraction from response...'); // Debug log
+        
+        // Try to extract JSON from the response if it's embedded in text
+        let extractedJson = null;
+        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+        
+        if (jsonMatch) {
           try {
-            // Attempt to extract text from malformed JSON
-            const textMatch = aiResponse.match(/"text"\s*:\s*"([^"]+)"/);
-            if (textMatch) {
-              cleanText = textMatch[1];
+            extractedJson = JSON.parse(jsonMatch[0]);
+            console.log('Successfully extracted JSON:', extractedJson); // Debug log
+            
+            if (extractedJson.title && extractedJson.text && extractedJson.steps) {
+              response = {
+                title: extractedJson.title,
+                text: extractedJson.text,
+                steps: extractedJson.steps,
+                lang,
+                source: "ai",
+              };
             } else {
-              // Fallback: clean up JSON-like formatting
-              cleanText = aiResponse
-                .replace(/[{}"]/g, '')
-                .replace(/title\s*:\s*/gi, '')
-                .replace(/text\s*:\s*/gi, '')
-                .replace(/steps\s*:\s*/gi, '')
-                .replace(/lang\s*:\s*/gi, '')
-                .replace(/source\s*:\s*/gi, '')
-                .replace(/,\s*$/gm, '')
-                .trim();
+              throw new Error('Extracted JSON missing required fields');
             }
-          } catch {
-            // If all else fails, use the original response but clean it up
-            cleanText = aiResponse.replace(/[{}"[\]]/g, '').trim();
+          } catch (extractError) {
+            console.log('JSON extraction failed:', extractError); // Debug log
+            extractedJson = null; // Make sure it's null for the next check
           }
         }
         
-        response = {
-          title: titles[lang] || titles.en,
-          text: cleanText || `${safeQuestion ? `Question: ${safeQuestion}. ` : ""}${intro[lang] || intro.en}`,
-          steps: stepsMap[lang] || stepsMap.en,
-          lang,
-          source: "ai",
-        };
+        // If JSON extraction failed, clean and format the AI text
+        if (!extractedJson) {
+          let cleanText = aiResponse;
+          
+          // Try to extract meaningful content if it looks like JSON
+          if (aiResponse.includes('{') && aiResponse.includes('}')) {
+            try {
+              // Attempt to extract text from malformed JSON
+              const textMatch = aiResponse.match(/"text"\s*:\s*"([^"]+)"/);
+              if (textMatch) {
+                cleanText = textMatch[1];
+              } else {
+                // Fallback: clean up JSON-like formatting
+                cleanText = aiResponse
+                  .replace(/[{}"[\]]/g, '')
+                  .replace(/title\s*:\s*/gi, '')
+                  .replace(/text\s*:\s*/gi, '')
+                  .replace(/steps\s*:\s*/gi, '')
+                  .replace(/lang\s*:\s*/gi, '')
+                  .replace(/source\s*:\s*/gi, '')
+                  .replace(/,\s*$/gm, '')
+                  .trim();
+              }
+            } catch {
+              // If all else fails, use the original response but clean it up
+              cleanText = aiResponse.replace(/[{}"[\]]/g, '').trim();
+            }
+          }
+          
+          response = {
+            title: titles[lang] || titles.en,
+            text: cleanText || `${safeQuestion ? `Question: ${safeQuestion}. ` : ""}${intro[lang] || intro.en}`,
+            steps: stepsMap[lang] || stepsMap.en,
+            lang,
+            source: "ai",
+          };
+        }
       }
     } catch (error) {
       console.error('AI generation failed:', error);
+      console.log('Falling back to template response');
       // Fallback to template response
       response = {
         title: titles[lang] || titles.en,
@@ -170,6 +305,7 @@ Keep it concise and practical.`;
       };
     }
   } else {
+    // No AI API key configured, use template response
     response = {
       title: titles[lang] || titles.en,
       text: `${safeQuestion ? `Question: ${safeQuestion}. ` : ""}${intro[lang] || intro.en}`,
@@ -178,5 +314,7 @@ Keep it concise and practical.`;
       source: "template",
     };
   }
+  
+  console.log('Final response:', response); // Debug log
   return res.json(response);
 };
