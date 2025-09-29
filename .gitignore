@@ -32,14 +32,13 @@ data/
 *.sqlite
 *.sqlite3
 
-# Environment files (except template)
+# Environment files (except example)
+.env
 .env.local
 .env.production
 .env.staging
 .env.netlify
-
-# Keep the main .env for development
-# !.env
+!.env.example
 
 # Deployment files
 .netlify/

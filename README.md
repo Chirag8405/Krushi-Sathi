@@ -1,33 +1,119 @@
-# 🌾 Krushi Sathi - Your Digital Farming Companion
+# 🌾 Krushi Sathi - AI Agricultural Advisory
 
-**Krushi Sathi** (कृषि साथी) is a modern web application designed to help farmers get instant agricultural advice in their native language. Whether you're dealing with crop diseases, planning your next planting season, or looking for the latest market prices, Krushi Sathi has got you covered.
+**Krushi Sathi** is a modern web application that provides AI-powered agricultural advice to farmers in their native language using voice, text, and image inputs.
 
-## 🎯 What makes this special?
+## ✨ Features
 
-This isn't just another farming app. We've built something that actually works for real farmers:
+- **🤖 AI-Powered Advice** - Get intelligent farming recommendations using Google Gemini AI
+- **🗣️ Voice Interface** - Speak your questions in 7 Indian languages
+- **📸 Image Analysis** - Upload crop photos for disease/pest identification
+- **🌍 Multilingual** - English, Hindi, Malayalam, Marathi, Kannada, Gujarati, Telugu
+- **📱 PWA Ready** - Install on mobile devices, works offline
+- **🌤️ Real-time Updates** - Weather, market prices, government schemes
 
-- **Talk in your language** - Support for 7 Indian languages including Hindi, Malayalam, Marathi, Kannada, Gujarati, and Telugu
-- **Just speak your question** - Voice input because typing on mobile can be a pain
-- **Snap a photo, get advice** - Upload crop images for instant diagnosis
-- **Works offline** - Basic features work even when your internet is spotty
-- **Sounds back to you** - Listen to advice in your own language
-
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
-
-You'll need these installed on your machine:
-- **Node.js** (version 18 or higher)
-- **npm** or **pnpm** (we prefer pnpm)
-- A **Google AI Studio API key** (free to get)
+- Node.js 18+
+- Google AI Studio API key (optional - works with templates without it)
 
 ### Installation
 
-1. **Clone this repository**
-   ```bash
-   git clone https://github.com/Chirag8405/Krushi-Sathi.git
-   cd Krushi-Sathi
-   ```
+Open your browser at `http://localhost:8080`
+
+### Environment Setup (Optional)
+
+Create a `.env` file in the root directory:
+```env
+# Optional: Add Google AI Studio API key for AI responses
+AI_API_KEY=your_google_ai_api_key_here
+
+# Optional: Add database URL for persistence  
+DATABASE_URL=your_postgresql_url_here
+```
+
+> **Get API Key:** Visit [Google AI Studio](https://makersuite.google.com/app/apikey) to get a free API key
+
+## 🚀 Deployment
+
+### Netlify (Recommended)
+
+1. Fork this repository
+2. Connect to Netlify
+3. Build settings:
+   - Build command: `npm run build`
+   - Publish directory: `dist/spa`
+4. Add environment variables in Netlify dashboard
+5. Deploy!
+
+### Other Platforms
+- **Vercel:** Works out of the box
+- **Self-hosted:** Run `npm run build` and serve the `dist/` folder
+
+## 🛠️ Tech Stack
+
+- **Frontend:** React 18, TypeScript, Tailwind CSS, Radix UI
+- **Backend:** Express.js, Node.js
+- **AI:** Google Gemini API
+- **Database:** PostgreSQL (optional)
+- **Build:** Vite
+
+## 🌟 Core Features
+
+### 🤖 AI Advisory System
+- Context-aware farming advice using Google Gemini
+- Fallback templates when API unavailable
+- Support for both text and image inputs
+
+### 🗣️ Voice Interface
+- Speech recognition in 7 languages
+- Text-to-speech responses
+- Mobile-optimized voice controls
+
+### 📸 Smart Image Analysis
+- Crop disease and pest identification
+- Automatic image compression
+- Secure client-side processing
+
+### 🌍 Multilingual Support
+- Complete UI translation for 7 Indian languages
+- Language-specific voice synthesis
+- Cultural adaptation of content
+
+### 📱 Progressive Web App
+- Installable on mobile devices
+- Offline functionality with service worker
+- Native app-like experience
+
+## 🔧 API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Service health and configuration |
+| POST | `/api/advisory` | Generate AI farming advice |
+| GET | `/api/updates` | Weather, market, and scheme data |
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/name`
+3. Commit changes: `git commit -m 'Add feature'`
+4. Push to branch: `git push origin feature/name`
+5. Create Pull Request
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Google AI for Gemini API
+- Open-Meteo for weather data  
+- Indian farming community for inspiration
+
+---
+
+**Built with ❤️ for farmers**
 
 2. **Install dependencies**
    ```bash

@@ -1,12 +1,14 @@
-import { Languages, Leaf, Moon, SunMedium } from "lucide-react";
+import { Languages, Leaf, Moon, SunMedium, WifiOff, Wifi } from "lucide-react";
 import { ReactNode, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/components/LocaleProvider";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import { cn } from "@/lib/utils";
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { lang, setLang, t } = useLocale();
   const [dark, setDark] = useState<boolean>(false);
+  const isOnline = useOnlineStatus();
 
   useEffect(() => {
     const saved = localStorage.getItem("theme");
@@ -85,8 +87,17 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div className="container py-6 text-xs text-muted-foreground flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>© {new Date().getFullYear()} {t("appName")}</span>
           <span className="inline-flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-brand-leaf" aria-hidden />
-            {t("offline")}
+            {isOnline ? (
+              <>
+                <Wifi className="h-4 w-4 text-brand-leaf" />
+                <span>Online</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="h-4 w-4 text-orange-500" />
+                <span>Offline Mode</span>
+              </>
+            )}
           </span>
         </div>
       </footer>

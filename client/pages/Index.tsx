@@ -14,11 +14,13 @@ import {
   Mic,
   RefreshCw,
   Save,
+  Share2,
   Sprout,
   Volume2,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { compressImage, isImageFile, validateImageSize } from "@/lib/image-utils";
 
 interface AdvisoryResult {
   title: string;
@@ -37,8 +39,39 @@ export default function Index() {
   const [image, setImage] = useState<string | null>(null);
   const [result, setResult] = useState<AdvisoryResult | null>(null);
   const [saved, setSaved] = useState<AdvisoryResult[]>([]);
+  const [location, setLocation] = useState<{lat: number, lon: number} | null>(null);
   const recognitionRef = useRef<any>(null);
   const advisoryRef = useRef<HTMLDivElement>(null);
+
+  // Handle URL query parameters for direct navigation
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get('action');
+    if (action === 'ask') setSection('ask');
+    else if (action === 'image') setSection('image');
+    else if (action === 'updates') setSection('updates');
+  }, []);
+
+  // Get user's geolocation for weather updates
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.log('Geolocation error:', error);
+          // Default to approximate center of India
+          setLocation({ lat: 20.5937, lon: 78.9629 });
+        }
+      );
+    } else {
+      setLocation({ lat: 20.5937, lon: 78.9629 });
+    }
+  }, []);
 
   useEffect(() => {
     const s = localStorage.getItem("saved-advisories");
@@ -170,6 +203,36 @@ export default function Index() {
     window.location.reload();
   };
 
+  const shareAdvice = async () => {
+    if (!result) return;
+    
+    const shareData = {
+      title: `${result.title} - Krushi Sathi`,
+      text: `${result.text}\n\nSteps:\n${result.steps.map((step, i) => `${i + 1}. ${step}`).join('\n')}`,
+      url: window.location.origin
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (error) {
+        console.log('Error sharing:', error);
+        fallbackShare(shareData);
+      }
+    } else {
+      fallbackShare(shareData);
+    }
+  };
+
+  const fallbackShare = (shareData: { title: string; text: string; url: string }) => {
+    if (navigator.clipboard) {
+      const textToShare = `${shareData.title}\n\n${shareData.text}\n\nGet more advice at: ${shareData.url}`;
+      navigator.clipboard.writeText(textToShare).then(() => {
+        alert(t('copiedToClipboard') || 'Copied to clipboard!');
+      });
+    }
+  };
+
   return (
     <Layout>
       {firstVisit && (
@@ -260,12 +323,32 @@ export default function Index() {
                     accept="image/*"
                     capture="environment"
                     className="hidden"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const f = e.target.files?.[0];
                       if (!f) return;
-                      const reader = new FileReader();
-                      reader.onload = () => setImage(reader.result as string);
-                      reader.readAsDataURL(f);
+                      
+                      // Validate file
+                      if (!isImageFile(f)) {
+                        alert(t('invalidImageFile') || 'Please select a valid image file');
+                        return;
+                      }
+                      
+                      if (!validateImageSize(f, 10)) {
+                        alert(t('imageTooLarge') || 'Image is too large. Please select an image smaller than 10MB');
+                        return;
+                      }
+                      
+                      try {
+                        // Compress image before setting
+                        const compressedImage = await compressImage(f, 2);
+                        setImage(compressedImage);
+                      } catch (error) {
+                        console.error('Image compression failed:', error);
+                        // Fallback to original file
+                        const reader = new FileReader();
+                        reader.onload = () => setImage(reader.result as string);
+                        reader.readAsDataURL(f);
+                      }
                     }}
                   />
                   <div className="rounded-lg border-2 border-dashed p-6 bg-background hover:bg-accent text-center">
@@ -295,7 +378,7 @@ export default function Index() {
           </section>
         )}
 
-        {section === "updates" && <UpdatesSection />}
+        {section === "updates" && <UpdatesSection location={location} />}
 
         {section === "loading" && (
           <section className="rounded-xl border bg-card p-4 md:p-6">
@@ -326,6 +409,9 @@ export default function Index() {
               <Button variant="secondary" onClick={printGuide}>
                 <Download /> {t("getGuide")}
               </Button>
+              <Button variant="outline" onClick={shareAdvice}>
+                <Share2 /> {t("share") || "Share"}
+              </Button>
               <Button variant="outline" onClick={() => { setSection("menu"); setQuestion(""); setImage(null); }}>
                 <Mic /> {t("askAnother")}
               </Button>
@@ -333,9 +419,10 @@ export default function Index() {
             <div className="mt-6">
               <div className="text-sm text-muted-foreground mb-2">{t("helpful")}</div>
               <div className="flex gap-2">
-                <BadgePill label="👍" />
-                <BadgePill label="👎" />
-                <BadgePill label="❤️" />
+                <FeedbackButton emoji="👍" label="Helpful" />
+                <FeedbackButton emoji="👎" label="Not helpful" />
+                <FeedbackButton emoji="❤️" label="Love it" />
+                <FeedbackButton emoji="🌱" label="Very useful" />
               </div>
             </div>
           </section>
@@ -413,7 +500,7 @@ function CardAction({ icon, title, onClick, className }: { icon: React.ReactNode
   );
 }
 
-function UpdatesSection() {
+function UpdatesSection({ location }: { location: {lat: number, lon: number} | null }) {
   const { t } = useLocale();
   const [enabled, setEnabled] = useState<boolean>(false);
   const [updates, setUpdates] = useState<any>(null);
@@ -422,7 +509,10 @@ function UpdatesSection() {
   useEffect(() => {
     const fetchUpdates = async () => {
       try {
-        const response = await fetch('/api/updates');
+        const url = location 
+          ? `/api/updates?lat=${location.lat}&lon=${location.lon}`
+          : '/api/updates';
+        const response = await fetch(url);
         if (response.ok) {
           const data = await response.json();
           setUpdates(data);
@@ -434,7 +524,7 @@ function UpdatesSection() {
       }
     };
     fetchUpdates();
-  }, []);
+  }, [location]);
 
   const requestPermission = async () => {
     try {
@@ -516,6 +606,34 @@ function BadgePill({ label }: { label: string }) {
     <span className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-sm">
       {label}
     </span>
+  );
+}
+
+function FeedbackButton({ emoji, label }: { emoji: string; label: string }) {
+  const [clicked, setClicked] = useState(false);
+  
+  const handleClick = () => {
+    setClicked(true);
+    // Track feedback (could send to analytics in production)
+    console.log(`Feedback: ${label} - ${emoji}`);
+    
+    // Reset after animation
+    setTimeout(() => setClicked(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={clicked}
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm transition-all",
+        clicked 
+          ? "bg-brand-leaf text-white border-brand-leaf scale-110" 
+          : "bg-background hover:bg-accent hover:scale-105"
+      )}
+    >
+      {emoji} {clicked ? "Thanks!" : label}
+    </button>
   );
 }
 

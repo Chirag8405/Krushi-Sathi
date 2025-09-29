@@ -61,7 +61,7 @@ export const postAdvisory: RequestHandler = async (req, res) => {
       // Initialize Google Gemini AI with configuration
       const genAI = new GoogleGenerativeAI(process.env.AI_API_KEY!);
       const model = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
+        model: "gemini-1.5-flash", // Try the flash model which should be available
         generationConfig: {
           temperature: 0.8, // Slightly higher for more engaging responses
           maxOutputTokens: 2500, // Increased for structured, engaging content
@@ -193,7 +193,40 @@ Combine your image analysis with the farmer's question to provide the most accur
       }
 
       // Race between AI request and timeout
-      const aiResult = await Promise.race([aiPromise, timeoutPromise]) as any;
+      let aiResult;
+      try {
+        aiResult = await Promise.race([aiPromise, timeoutPromise]) as any;
+      } catch (error: any) {
+        // If we get a 404 model not found error, try fallback models
+        if (error.status === 404 && error.message?.includes('not found')) {
+          console.log('Model not found, trying fallback model...');
+          const fallbackModel = genAI.getGenerativeModel({ 
+            model: "gemini-pro",
+            generationConfig: {
+              temperature: 0.8,
+              maxOutputTokens: 2500,
+            },
+          });
+          
+          if (imageBase64) {
+            const base64Data = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+            aiResult = await fallbackModel.generateContent([
+              { text: prompt + `\n\nIMAGE ANALYSIS REQUIRED: Please analyze the uploaded image and provide specific advice based on what you observe.` },
+              {
+                inlineData: {
+                  mimeType: "image/jpeg",
+                  data: base64Data
+                }
+              } as any
+            ]);
+          } else {
+            aiResult = await fallbackModel.generateContent([{ text: prompt }]);
+          }
+        } else {
+          throw error; // Re-throw if it's not a model availability issue
+        }
+      }
+      
       let aiResponse = aiResult.response.text();
       
       console.log('Raw AI Response:', aiResponse); // Debug log

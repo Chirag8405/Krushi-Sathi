@@ -42,6 +42,10 @@ const STRINGS: Record<LangCode, Record<string, string>> = {
     marketPrices: "Market Prices",
     govtSchemes: "Govt Schemes",
     offline: "Available offline",
+    share: "Share",
+    copiedToClipboard: "Copied to clipboard!",
+    invalidImageFile: "Please select a valid image file",
+    imageTooLarge: "Image is too large. Please select an image smaller than 10MB",
   },
   ml: {
     appName: "കൃ���ി സാഥി",
@@ -74,6 +78,8 @@ const STRINGS: Record<LangCode, Record<string, string>> = {
     marketPrices: "വിലവിവരം",
     govtSchemes: "സർക്കാർ പദ്ധതികൾ",
     offline: "ഓഫ്‌ലൈൻ ലഭ്യം",
+    share: "പങ്കിടുക",
+    copiedToClipboard: "ക്ലിപ്പ്ബോർഡിലേക്ക് കോപ്പി ചെയ്തു!",
   },
   hi: {
     appName: "कृषि साथी",
@@ -106,6 +112,8 @@ const STRINGS: Record<LangCode, Record<string, string>> = {
     marketPrices: "बाजार मूल्य",
     govtSchemes: "सरकारी योजनाएँ",
     offline: "ऑफ़लाइन उपलब्ध",
+    share: "साझा करें",
+    copiedToClipboard: "क्लिपबोर्ड में कॉपी किया गया!",
   },
   mr: {
     appName: "कृषी साथी",
@@ -138,6 +146,8 @@ const STRINGS: Record<LangCode, Record<string, string>> = {
     marketPrices: "बाजारभाव",
     govtSchemes: "शासकीय योजना",
     offline: "ऑफलाइन उपलब्ध",
+    share: "शेअर करा",
+    copiedToClipboard: "क्लिपबोर्डमध्ये कॉपी केले!",
   },
   kn: {
     appName: "ಕೃಷಿ ಸಾಥಿ",
@@ -170,6 +180,8 @@ const STRINGS: Record<LangCode, Record<string, string>> = {
     marketPrices: "ಮಾರುಕಟ್ಟೆ ಬೆಲೆಗಳು",
     govtSchemes: "ಸರ್ಕಾರಿ ಯೋಜನೆಗಳು",
     offline: "ಆಫ್‌ಲೈನ್ ಲಭ್ಯ",
+    share: "ಹಂಚಿಕೊಳ್ಳಿ",
+    copiedToClipboard: "ಕ್ಲಿಪ್‌ಬೋರ್ಡ್‌ಗೆ ಕಾಪಿ ಮಾಡಲಾಗಿದೆ!",
   },
   gu: {
     appName: "કૃષિ સાથી",
@@ -202,6 +214,8 @@ const STRINGS: Record<LangCode, Record<string, string>> = {
     marketPrices: "બજાર ભાવ",
     govtSchemes: "સરકારી યોજનાઓ",
     offline: "ઓફલાઈન ઉપલબ્ધ",
+    share: "શેર કરો",
+    copiedToClipboard: "ક્લિપબોર્ડમાં કૉપિ થયું!",
   },
   te: {
     appName: "కృషి సాథి",
@@ -234,6 +248,8 @@ const STRINGS: Record<LangCode, Record<string, string>> = {
     marketPrices: "మార్కెట్ ధరలు",
     govtSchemes: "ప్రభుత్వ పథకాలు",
     offline: "ఆఫ్‌లైన్ అందుబాటులో",
+    share: "షేర్ చేయండి",
+    copiedToClipboard: "క్లిప్‌బోర్డ్‌కు కాపీ చేయబడింది!",
   },
 };
 
