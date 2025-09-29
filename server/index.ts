@@ -30,6 +30,7 @@ const createRateLimit = (windowMs: number, max: number) => {
     next();
   };
 };
+
 import { handleDemo } from "./routes/demo";
 import { postAdvisory } from "./routes/advisory";
 import { postSaveAdvisory, getAdvisories } from "./routes/advisories";

@@ -1,7 +1,7 @@
-import { defineConfig, Plugin } from "vite";
+import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import { createServer } from "./server";
+import { fileURLToPath, URL } from "node:url";
 
 export default defineConfig(({ mode }) => ({
   server: {
@@ -10,12 +10,15 @@ export default defineConfig(({ mode }) => ({
     strictPort: true,
     hmr: {
       protocol: 'ws',
-      host: 'localhost',
+      host: 'localhost',  
       port: 8080,
     },
-    fs: {
-      allow: [".", "./client", "./shared"],
-      deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**", "server/**"],
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8082',
+        changeOrigin: true,
+        rewrite: (path) => path
+      }
     }
   },
   build: {
@@ -25,29 +28,18 @@ export default defineConfig(({ mode }) => ({
     'process.env.NODE_ENV': JSON.stringify(mode),
     '__DEV__': mode === 'development'
   },
-  plugins: [react(), expressPlugin()],
+  plugins: [react()],
 
   optimizeDeps: {
     include: ['react', 'react-dom']
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./client"),
-      "@shared": path.resolve(__dirname, "./shared"),
+      "@": fileURLToPath(new URL("./client", import.meta.url)),
+      "@shared": fileURLToPath(new URL("./shared", import.meta.url)),
     },
   },
 }));
 
-function expressPlugin(): Plugin {
-  return {
-    name: "express-plugin",
-    apply: "serve",
-    configureServer(server) {
-      const app = createServer();
-      
-      return () => {
-        server.middlewares.use('/api', app);
-      };
-    },
-  };
-}
+
+
