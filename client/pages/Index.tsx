@@ -37,12 +37,29 @@ export default function Index() {
   const [section, setSection] = useState<Section>("menu");
   const [question, setQuestion] = useState("");
   const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   const [result, setResult] = useState<AdvisoryResult | null>(null);
   const [saved, setSaved] = useState<AdvisoryResult[]>([]);
   const [location, setLocation] = useState<{lat: number, lon: number} | null>(null);
   const recognitionRef = useRef<any>(null);
   const advisoryRef = useRef<HTMLDivElement>(null);
+
+  // Cleanup speech when component unmounts or section changes
+  useEffect(() => {
+    return () => {
+      speechSynthesis.cancel();
+      setSpeaking(false);
+    };
+  }, []);
+
+  // Stop speech when navigating away from result section
+  useEffect(() => {
+    if (section !== 'result' && speaking) {
+      speechSynthesis.cancel();
+      setSpeaking(false);
+    }
+  }, [section, speaking]);
 
   // Handle URL query parameters for direct navigation
   useEffect(() => {
@@ -122,7 +139,24 @@ export default function Index() {
   };
 
   const speak = (text: string) => {
-    const utter = new SpeechSynthesisUtterance(text);
+    // If already speaking, stop current speech
+    if (speaking) {
+      speechSynthesis.cancel();
+      setSpeaking(false);
+      return;
+    }
+
+    // Clean the text - remove HTML tags and markdown
+    const cleanText = text
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold markdown
+      .replace(/\*([^*]+)\*/g, '$1') // Remove italic markdown
+      .replace(/\n+/g, '. ') // Replace newlines with periods
+      .trim();
+
+    if (!cleanText) return;
+
+    const utter = new SpeechSynthesisUtterance(cleanText);
     const speechMap: Record<string, string> = {
       en: "en-US",
       ml: "ml-IN",
@@ -132,7 +166,16 @@ export default function Index() {
       gu: "gu-IN",
       te: "te-IN",
     };
+    
     utter.lang = speechMap[lang] || "en-US";
+    utter.rate = 0.9; // Slightly slower for better comprehension
+    utter.volume = 1;
+    
+    // Set up event listeners
+    utter.onstart = () => setSpeaking(true);
+    utter.onend = () => setSpeaking(false);
+    utter.onerror = () => setSpeaking(false);
+    
     speechSynthesis.speak(utter);
   };
 
@@ -392,49 +435,48 @@ export default function Index() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="font-bold text-xl mb-2">{result.title}</h3>
-                <div className="text-foreground/90 mb-3 text-lg leading-relaxed prose prose-slate dark:prose-invert max-w-none prose-headings:text-foreground prose-strong:text-foreground prose-p:text-foreground prose-li:text-foreground">
-                  <ReactMarkdown 
-                    components={{
-                      // Custom components for better styling
-                      h1: ({children}) => <h1 className="text-2xl font-bold text-foreground mb-4">{children}</h1>,
-                      h2: ({children}) => <h2 className="text-xl font-bold text-foreground mb-3">{children}</h2>,
-                      h3: ({children}) => <h3 className="text-lg font-bold text-foreground mb-2">{children}</h3>,
-                      h4: ({children}) => <h4 className="text-lg font-bold text-foreground mb-2">{children}</h4>,
-                      strong: ({children}) => <strong className="font-bold text-foreground">{children}</strong>,
-                      em: ({children}) => <em className="italic text-foreground">{children}</em>,
-                      p: ({children}) => <p className="mb-3 text-foreground">{children}</p>,
-                      ul: ({children}) => <ul className="list-none space-y-1 mb-3">{children}</ul>,
-                      li: ({children}) => (
-                        <li className="flex items-start gap-2">
-                          <span className="text-foreground mt-1">•</span>
-                          <span className="text-foreground flex-1">{children}</span>
-                        </li>
-                      ),
-                    }}
-                  >
-                    {result.text}
-                  </ReactMarkdown>
-                </div>
+                <div 
+                  className="text-foreground/90 mb-3 text-lg leading-relaxed"
+                  style={{ lineHeight: '1.6' }}
+                  dangerouslySetInnerHTML={{ 
+                    __html: result.text
+                      // Convert **text:** to headers with inline styles
+                      .replace(/\*\*([^*:]+):\*\*/g, '<h4 style="font-weight: bold; font-size: 1.125rem; margin-top: 1rem; margin-bottom: 0.5rem; color: inherit;">$1:</h4>')
+                      // Convert **bold** to strong with inline styles  
+                      .replace(/\*\*([^*]+)\*\*/g, '<strong style="font-weight: bold; color: inherit;">$1</strong>')
+                      // Convert *italic* to em
+                      .replace(/\*([^*]+)\*/g, '<em style="font-style: italic; color: inherit;">$1</em>')
+                      // Convert bullet points with inline flex styles
+                      .replace(/^[\s]*[•\-\*]\s(.+)$/gm, '<div style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.25rem;"><span style="color: inherit; margin-top: 0.125rem;">•</span><span style="color: inherit; flex: 1;">$1</span></div>')
+                      // Convert numbered lists
+                      .replace(/^[\s]*(\d+)\.\s(.+)$/gm, '<div style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.25rem;"><span style="font-weight: 600; color: inherit;">$1.</span><span style="color: inherit; flex: 1;">$2</span></div>')
+                      // Convert line breaks
+                      .replace(/\n/g, '<br />')
+                  }}
+                />
               </div>
-              <Button variant="secondary" onClick={() => speak(result.text)} aria-label={t("listen")}>
-                <Volume2 /> {t("listen")}
+              <Button 
+                variant={speaking ? "destructive" : "secondary"} 
+                onClick={() => speak(result.text)} 
+                aria-label={speaking ? t("stop") : t("listen")}
+                className={speaking ? "animate-pulse" : ""}
+              >
+                <Volume2 /> {speaking ? t("stop") : t("listen")}
               </Button>
             </div>
             <ol className="list-decimal pl-5 space-y-2 text-foreground/90">
               {result.steps.map((s, i) => (
-                <li key={i} className="text-foreground">
-                  <div className="prose prose-slate dark:prose-invert max-w-none">
-                    <ReactMarkdown
-                      components={{
-                        strong: ({children}) => <strong className="font-bold text-foreground">{children}</strong>,
-                        em: ({children}) => <em className="italic text-foreground">{children}</em>,
-                        p: ({children}) => <span className="text-foreground">{children}</span>,
-                      }}
-                    >
-                      {s}
-                    </ReactMarkdown>
-                  </div>
-                </li>
+                <li 
+                  key={i} 
+                  className="text-foreground"
+                  dangerouslySetInnerHTML={{
+                    __html: s
+                      // Convert **bold** to strong with inline styles
+                      .replace(/\*\*([^*]+)\*\*/g, '<strong style="font-weight: bold; color: inherit;">$1</strong>')
+                      // Convert *italic* to em
+                      .replace(/\*([^*]+)\*/g, '<em style="font-style: italic; color: inherit;">$1</em>')
+                  }}
+                />
               ))}
             </ol>
             <div className="flex flex-wrap gap-2 mt-4">
