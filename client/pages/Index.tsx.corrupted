@@ -990,3 +990,27 @@ function BellDot() {
     </svg>
   );
 }
+    }
+  const intro: Record<string, string> = {
+    en: "Here are personalized steps for your crop.",
+    ml: "നിങ്ങളുടെ വിളയ്ക്ക് ആവശ്യമായ സഹായ നിർദ്ദേശങ്ങൾ താഴെ നൽകിയിരിക്കുന്നു.",
+    hi: "आपकी फसल के लिए आवश्यक सलाह नीचे दी गई है।",
+    mr: "तुमच्या पिकासाठी आ���श्यक पायऱ्या खाली दिलेल्या आहेत.",
+    kn: "ನಿಮ್ಮ ಬೆಳೆಗಾಗಿ ವೈಯಕ್ತಿಕ ಹಂತಗಳು ಕೆಳಗೆ ನೀಡಲಾಗಿದೆ.",
+    gu: "તમારી પાક માટે વ્યક્તિગત પગલાં નીચે આપેલ છે.",
+    te: "మీ పంట కోసం సూచనలు క్రింద ఉన్నాయి.",
+  };
+  const title = titles[lang] || titles.en;
+  const steps = stepsMap[lang] || stepsMap.en;
+  const text = `${q ? `${promptPrefix[lang] || promptPrefix.en} ${q}. ` : ""}${intro[lang] || intro.en}`;
+
+  return { title, text, steps, lang };
+}
+
+function BellDot() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-brand-sun">
+      <path d="M12 2a7 7 0 0 0-7 7v3.586l-1.707 1.707A1 1 0 0 0 4 16h16a1 1 0 0 0 .707-1.707L19 12.586V9a7 7 0 0 0-7-7zm0 20a3 3 0 0 0 3-3H9a3 3 0 0 0 3 3z" />
+    </svg>
+  );
+}
