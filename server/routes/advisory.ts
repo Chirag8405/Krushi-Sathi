@@ -69,18 +69,19 @@ export const postAdvisory: RequestHandler = async (req, res) => {
       });
 
       // Create detailed and engaging prompt for comprehensive agricultural advice
-      const systemPrompt = `You are Dr. Krishi, a friendly and experienced agricultural expert with 25+ years of field experience across Indian farming systems.
+      // Create detailed and engaging prompt for comprehensive agricultural advice
+      const systemPrompt = `CRITICAL: You MUST respond with ONLY valid JSON. No text before or after. Start with { and end with }.
 
-CRITICAL INSTRUCTION: You MUST respond with ONLY a valid JSON object. Do not include any text before or after the JSON. Start your response with { and end with }.
-
-Required JSON format:
+Example format:
 {
-  "title": "🌱 Engaging title with emoji (max 60 chars)",
-  "text": "Detailed agricultural advice with **bold** formatting and bullet points",
-  "steps": ["🔍 Step 1 with emoji and action", "💧 Step 2 with specific method", "👀 Step 3 monitoring", "🛡️ Step 4 prevention"],
+  "title": "🌱 Crop Treatment Guide", 
+  "text": "**Problem:** Issue description **Solutions:** Treatment steps **Prevention:** Future tips",
+  "steps": ["🔍 Action 1", "💧 Action 2", "👀 Action 3", "🛡️ Action 4"],
   "lang": "${lang}",
   "source": "ai"
 }
+
+Rules: Use **bold** for headings. Include emojis. Keep conversational tone. Add costs in ₹. NO text outside JSON.
 
 JSON FORMATTING RULES for "text" field:
 ✅ Use **bold** for headings: **Problem Analysis:** **Solutions:** **Prevention:**
@@ -113,15 +114,9 @@ REMEMBER: Output ONLY valid JSON. No extra text, explanations, or markdown forma
 
 FARMER'S QUESTION: "${safeQuestion}"
 
-CONTEXT & GUIDELINES:
-🌍 Location: Indian agricultural context (diverse climate zones)
-👨‍🌾 Farmer Profile: Small to medium-scale farming, resource-conscious
-💰 Budget Preference: Cost-effective solutions under ₹500 preferred
-🌿 Method Preference: Organic and sustainable methods first
-📅 Current Season: Post-monsoon season (September-October)
-🏪 Materials: Focus on locally available items (neem, turmeric, cow dung, compost)
+CONTEXT: Indian agriculture, post-monsoon season, budget under ₹500, prefer organic solutions.
 
-Provide comprehensive, encouraging, and detailed agricultural advice following the exact JSON format. Make your response engaging with emojis, clear formatting, and practical steps that build farmer confidence.`;
+RESPOND WITH ONLY JSON - NO EXPLANATIONS OR EXTRA TEXT:`;
 
       
       // Create a timeout promise for AI requests (25 seconds for detailed responses)
@@ -203,9 +198,12 @@ Combine your visual analysis with the farmer's question to provide laser-focused
       
       let aiResponse = aiResult.response.text();
       
-      console.log('Raw AI Response:', aiResponse); // Debug log
-      
-      console.log('Raw AI Response:', aiResponse);
+      console.log('=== AI RESPONSE DEBUG ===');
+      console.log('Length:', aiResponse.length);
+      console.log('Starts with {:', aiResponse.trim().startsWith('{'));
+      console.log('Ends with }:', aiResponse.trim().endsWith('}'));
+      console.log('Preview:', aiResponse.substring(0, 300));
+      console.log('========================');
       
       // Multiple strategies to extract valid JSON
       let parsedResponse = null;
