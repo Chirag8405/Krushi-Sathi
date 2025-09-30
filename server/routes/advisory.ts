@@ -343,10 +343,18 @@ Combine your visual analysis with the farmer's question to provide laser-focused
             }
           }
           
+          // If we don't have valid AI response, return error instead of fallback
+          if (!cleanText) {
+            return res.status(503).json({
+              error: 'AI service returned invalid response. Please try again.',
+              code: 'AI_INVALID_RESPONSE'
+            });
+          }
+          
           response = {
-            title: titles[lang] || titles.en,
-            text: cleanText || `${safeQuestion ? `Question: ${safeQuestion}. ` : ""}${intro[lang] || intro.en}`,
-            steps: stepsMap[lang] || stepsMap.en,
+            title: "Agricultural Advisory", // Simple fallback title
+            text: cleanText,
+            steps: ["Please try asking your question again for detailed steps"], // Minimal fallback
             lang,
             source: "ai",
           };
@@ -354,25 +362,18 @@ Combine your visual analysis with the farmer's question to provide laser-focused
       }
     } catch (error) {
       console.error('AI generation failed:', error);
-      console.log('Falling back to template response');
-      // Fallback to template response
-      response = {
-        title: titles[lang] || titles.en,
-        text: `${safeQuestion ? `Question: ${safeQuestion}. ` : ""}${intro[lang] || intro.en}`,
-        steps: stepsMap[lang] || stepsMap.en,
-        lang,
-        source: "template",
-      };
+      // Return error instead of template response
+      return res.status(503).json({
+        error: 'Service temporarily unavailable. Our AI advisory service is currently experiencing technical difficulties. Please try again in a few minutes.',
+        code: 'AI_SERVICE_ERROR'
+      });
     }
   } else {
-    // No AI API key configured, use template response
-    response = {
-      title: titles[lang] || titles.en,
-      text: `${safeQuestion ? `Question: ${safeQuestion}. ` : ""}${intro[lang] || intro.en}`,
-      steps: stepsMap[lang] || stepsMap.en,
-      lang,
-      source: "template",
-    };
+    // No AI API key configured, return error
+    return res.status(503).json({
+      error: 'Service configuration error. AI advisory service is not properly configured. Please contact support.',
+      code: 'AI_CONFIG_ERROR'
+    });
   }
   
   console.log('Final response:', response); // Debug log

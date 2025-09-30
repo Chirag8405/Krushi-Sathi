@@ -981,8 +981,20 @@ function FeedbackButton({ emoji, label }: { emoji: string; label: string }) {
   );
 }
 
-function makeAdvisory(q: string, img: string | null, lang: string): AdvisoryResult {
-  const titles: Record<string, string> = {
+// Removed unused makeAdvisory function - all fallback responses now handled by server error responses
+
+function BellDot() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-brand-sun">
+      <path d="M12 2a7 7 0 0 0-7 7v3.586l-1.707 1.707A1 1 0 0 0 4 16h16a1 1 0 0 0 .707-1.707L19 12.586V9a7 7 0 0 0-7-7zm0 20a3 3 0 0 0 3-3H9a3 3 0 0 0 3 3z" />
+    </svg>
+  );
+}
+
+function BellDot() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-brand-sun">
+      <path d="M12 2a7 7 0 0 0-7 7v3.586l-1.707 1.707A1 1 0 0 0 4 16h16a1 1 0 0 0 .707-1.707L19 12.586V9a7 7 0 0 0-7-7zm0 20a3 3 0 0 0 3-3H9a3 3 0 0 0 3 3z" />
     en: "Crop Advisory",
     ml: "കൃഷി നിർദ്ദേശം",
     hi: "कृषि सलाह",
