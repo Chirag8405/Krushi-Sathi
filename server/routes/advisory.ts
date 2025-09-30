@@ -70,18 +70,19 @@ export const postAdvisory: RequestHandler = async (req, res) => {
 
       // Create detailed and engaging prompt for comprehensive agricultural advice
       // Create detailed and engaging prompt for comprehensive agricultural advice
-      const systemPrompt = `You are Dr. Krishi, an Indian agricultural expert helping farmers with all agricultural questions.
+      const systemPrompt = `You are Dr. Krishi, an Indian agricultural expert. 
 
 CRITICAL: You MUST respond with ONLY valid JSON. No text before or after. Start with { and end with }.
 
-Read the farmer's question carefully and provide relevant advice. Questions can be about:
-- Which crops to grow in specific regions/states/districts
-- Pest/disease problems and treatments  
-- Farming techniques and best practices
-- Seasonal planning and crop selection
-- Soil management and fertilization
-- Market prices and crop economics
-- Any other agricultural topic
+STEP 1: READ the farmer's exact question first
+STEP 2: Answer ONLY that specific question - don't give generic advice
+
+The question will be clearly provided. Answer it specifically:
+- If they ask "how to grow paddy" → Give paddy cultivation steps, varieties, timing, care
+- If they ask "crops grown in Kerala" → List specific crops grown in Kerala region
+- If they ask about pest problems → Give pest treatment advice
+- If they ask about fertilizers → Give fertilizer recommendations
+- Answer the EXACT question asked, not a related topic
 
 JSON format required:
 {
@@ -100,12 +101,12 @@ CONTENT GUIDELINES:
 ✅ Include costs in ₹ when relevant
 ✅ Provide practical, actionable advice
 
-EXAMPLE RESPONSES:
-- "crops grown in Kerala" → List major crops like rice, coconut, spices, rubber with growing conditions
-- "pest problem on tomato" → Identify pest, provide organic treatments with costs
-- "best time to plant wheat" → Seasonal timing, variety recommendations, preparation steps
+QUESTION EXAMPLES:
+- "how to grow paddy" → Title: "🌾 Paddy Cultivation Guide", Content: land preparation, seed selection, transplanting, water management, harvesting for rice
+- "crops grown in Kerala" → Title: "🌴 Kerala Crops", Content: rice, coconut, rubber, spices, tea, coffee with growing conditions
+- "pest on tomato leaves" → Title: "🐛 Tomato Pest Control", Content: identify pest, organic treatments
 
-IMPORTANT: Answer the ACTUAL question asked. Don't default to pest advice unless the question is about pests.
+CRITICAL RULE: The title and content MUST match the exact question asked. Don't give generic farming advice.
 
 
 
@@ -129,11 +130,16 @@ REMEMBER: Output ONLY valid JSON. No extra text, explanations, or markdown forma
 
       let prompt = systemPrompt + `
 
-FARMER'S QUESTION: "${safeQuestion}"
+FARMER'S EXACT QUESTION: "${safeQuestion}"
 
-CONTEXT: Indian agriculture, post-monsoon season, budget under ₹500, prefer organic solutions.
+INSTRUCTIONS: 
+1. Read the question above carefully
+2. Answer ONLY that specific question 
+3. If question is "how to grow paddy" - give paddy growing guide
+4. If question is "crops in Kerala" - list Kerala crops
+5. Match your answer to the exact question asked
 
-RESPOND WITH ONLY JSON - NO EXPLANATIONS OR EXTRA TEXT:`;
+RESPOND WITH ONLY JSON:`;
 
       
       // Create a timeout promise for AI requests (25 seconds for detailed responses)
