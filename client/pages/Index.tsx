@@ -139,6 +139,12 @@ export default function Index() {
   };
 
   const speak = (text: string) => {
+    // Check if speech synthesis is supported
+    if (!('speechSynthesis' in window)) {
+      alert('Speech synthesis is not supported in this browser. Please try Chrome, Firefox, or Safari.');
+      return;
+    }
+
     // If already speaking, stop current speech
     if (speaking) {
       speechSynthesis.cancel();
@@ -156,27 +162,148 @@ export default function Index() {
 
     if (!cleanText) return;
 
-    const utter = new SpeechSynthesisUtterance(cleanText);
-    const speechMap: Record<string, string> = {
-      en: "en-US",
-      ml: "ml-IN",
-      hi: "hi-IN",
-      mr: "mr-IN",
-      kn: "kn-IN",
-      gu: "gu-IN",
-      te: "te-IN",
+    // Wait for voices to load, then speak
+    const speakWithVoices = () => {
+      const voices = speechSynthesis.getVoices();
+      console.log('Available voices:', voices.length);
+      
+      const utter = new SpeechSynthesisUtterance(cleanText);
+      
+      const speechMap: Record<string, string> = {
+        en: "en-US",
+        ml: "ml-IN", 
+        hi: "hi-IN",
+        mr: "mr-IN",
+        kn: "kn-IN",
+        gu: "gu-IN",
+        te: "te-IN",
+      };
+      
+      const targetLang = speechMap[lang] || "en-US";
+      utter.lang = targetLang;
+      
+      // Enhanced voice selection logic
+      let voice = null;
+      
+      // First, try to find exact language match
+      voice = voices.find(v => v.lang === targetLang);
+      
+      // If no exact match, try language code match (e.g., 'hi' for 'hi-IN')
+      if (!voice) {
+        const langCode = targetLang.substring(0, 2);
+        voice = voices.find(v => v.lang.startsWith(langCode));
+      }
+      
+      // If still no match, try looking for language in voice name
+      if (!voice) {
+        const langNames = {
+          'hi': ['hindi', 'हिंदी'],
+          'ml': ['malayalam', 'മലയാളം'],
+          'mr': ['marathi', 'मराठी'],
+          'kn': ['kannada', 'ಕನ್ನಡ'],
+          'gu': ['gujarati', 'ગુજરાતી'],
+          'te': ['telugu', 'తెలుగు']
+        };
+        
+        const langCode = targetLang.substring(0, 2);
+        const searchNames = langNames[langCode as keyof typeof langNames] || [];
+        
+        voice = voices.find(v => 
+          searchNames.some(name => 
+            v.name.toLowerCase().includes(name.toLowerCase()) ||
+            v.lang.toLowerCase().includes(name.toLowerCase())
+          )
+        );
+      }
+      
+      // Fallback to any available voice that's not English
+      if (!voice && targetLang !== 'en-US') {
+        voice = voices.find(v => !v.lang.startsWith('en'));
+      }
+      
+      // Final fallback to English or first available voice
+      if (!voice) {
+        voice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+      }
+      
+      if (voice) {
+        utter.voice = voice;
+        console.log('Using voice:', voice.name, 'Language:', voice.lang, 'Target:', targetLang);
+      } else {
+        console.log('No suitable voice found, using system default');
+      }
+      
+      // Log all available voices for debugging
+      console.log('All available voices:', voices.map(v => ({ name: v.name, lang: v.lang })));
+      
+      // Audio settings for better compatibility
+      utter.rate = 0.8;
+      utter.pitch = 1;
+      utter.volume = 1;
+      
+      // Set up event listeners with detailed logging
+      utter.onstart = () => {
+        console.log('🔊 Speech started successfully');
+        setSpeaking(true);
+      };
+      
+      utter.onend = () => {
+        console.log('✅ Speech completed');
+        setSpeaking(false);
+      };
+      
+      utter.onerror = (event) => {
+        console.error('❌ Speech error:', event.error);
+        setSpeaking(false);
+        
+        // Show user-friendly error message
+        if (event.error === 'network') {
+          alert('Network error: Please check your internet connection and try again.');
+        } else if (event.error === 'not-allowed') {
+          alert('Audio permission denied. Please allow audio in your browser settings and try again.');
+        } else {
+          alert('Speech synthesis failed. Please try again or check your browser audio settings.');
+        }
+      };
+      
+      // Cancel any existing speech and speak
+      speechSynthesis.cancel();
+      console.log('🎤 Starting speech synthesis...');
+      speechSynthesis.speak(utter);
+      
+      // Fallback: Check if speech actually started after a delay
+      setTimeout(() => {
+        if (!speechSynthesis.speaking && !speechSynthesis.pending) {
+          console.warn('⚠️ Speech may not have started. Trying fallback...');
+          setSpeaking(false);
+          // Try with a simpler approach
+          const simpleUtter = new SpeechSynthesisUtterance('Test');
+          simpleUtter.onstart = () => {
+            // If test works, try original text again
+            speechSynthesis.speak(utter);
+          };
+          speechSynthesis.speak(simpleUtter);
+        }
+      }, 100);
     };
-    
-    utter.lang = speechMap[lang] || "en-US";
-    utter.rate = 0.9; // Slightly slower for better comprehension
-    utter.volume = 1;
-    
-    // Set up event listeners
-    utter.onstart = () => setSpeaking(true);
-    utter.onend = () => setSpeaking(false);
-    utter.onerror = () => setSpeaking(false);
-    
-    speechSynthesis.speak(utter);
+
+    // If voices are already loaded, speak immediately
+    if (speechSynthesis.getVoices().length > 0) {
+      speakWithVoices();
+    } else {
+      // Wait for voices to load
+      const handleVoicesChanged = () => {
+        speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
+        speakWithVoices();
+      };
+      speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
+      
+      // Fallback timeout in case voiceschanged doesn't fire
+      setTimeout(() => {
+        speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
+        speakWithVoices();
+      }, 1000);
+    }
   };
 
   const onSubmitAsk = async () => {
@@ -199,9 +326,47 @@ export default function Index() {
       setSection("result");
     } catch (error) {
       console.error('Failed to get advisory:', error);
-      // Fallback to local mock data
-      const res = makeAdvisory(question, null, lang);
-      setResult(res);
+      // Show server error message
+      const serverErrorMessages: Record<string, {title: string, text: string, steps: string[]}> = {
+        en: {
+          title: "🔧 Service Temporarily Unavailable",
+          text: "We're sorry, but our agricultural advisory service is currently experiencing technical difficulties. Our servers are temporarily down for maintenance or experiencing high traffic. Please try again in a few minutes. If the problem persists, please check back later.",
+          steps: [
+            "Wait for 2-3 minutes and try your question again",
+            "Check your internet connection", 
+            "Try refreshing the page",
+            "If the issue continues, please visit us again later"
+          ]
+        },
+        hi: {
+          title: "🔧 सेवा अस्थायी रूप से अनुपलब्ध",
+          text: "हमें खुशी है कि आप हमारी कृषि सलाह सेवा का उपयोग कर रहे हैं, लेकिन अभी हमारे सर्वर में तकनीकी समस्या है। कृपया कुछ मिनट बाद फिर से कोशिश करें। यदि समस्या बनी रहे तो बाद में आएं।",
+          steps: [
+            "2-3 मिनट प्रतीक्षा करें और फिर से प्रयास करें",
+            "अपना इंटरनेट कनेक्शन जांचें",
+            "पेज को रिफ्रेश करने की कोशिश करें", 
+            "यदि समस्या जारी रहे तो कृपया बाद में आएं"
+          ]
+        },
+        ml: {
+          title: "🔧 സേവനം താത്കാലികമായി ലഭ്യമല്ല",
+          text: "ക്ഷമിക്കണം, ഞങ്ങളുടെ കാർഷിക സേവനത്തിൽ ഇപ്പോൾ സാങ്കേതിക പ്രശ്‌നമുണ്ട്. ദയവായി കുറച്ച് മിനിറ്റുകൾക്ക് ശേഷം വീണ്ടും ശ്രമിക്കുക. പ്രശ്‌നം തുടരുകയാണെങ്കിൽ പിന്നീട് വരുക.",
+          steps: [
+            "2-3 മിനിറ്റ് കാത്തിരുന്ന് വീണ്ടും ശ്രമിക്കുക",
+            "നിങ്ങളുടെ ഇന്റർനെറ്റ് കണക്ഷൻ പരിശോധിക്കുക",
+            "പേജ് പുതുക്കാൻ ശ്രമിക്കുക",
+            "പ്രശ്‌നം തുടർന്നാൽ പിന്നീട് വരിക"
+          ]
+        }
+      };
+      
+      const errorMsg = serverErrorMessages[lang] || serverErrorMessages.en;
+      setResult({
+        title: errorMsg.title,
+        text: errorMsg.text,
+        steps: errorMsg.steps,
+        lang: lang
+      });
       setSection("result");
     }
   };
@@ -230,9 +395,47 @@ export default function Index() {
       setSection("result");
     } catch (error) {
       console.error('Failed to get advisory:', error);
-      // Fallback to local mock data
-      const res = makeAdvisory(question || t("uploadImage"), image, lang);
-      setResult(res);
+      // Show server error message  
+      const serverErrorMessages: Record<string, {title: string, text: string, steps: string[]}> = {
+        en: {
+          title: "🔧 Service Temporarily Unavailable",
+          text: "We're sorry, but our agricultural advisory service is currently experiencing technical difficulties. Our servers are temporarily down for maintenance or experiencing high traffic. Please try again in a few minutes. If the problem persists, please check back later.",
+          steps: [
+            "Wait for 2-3 minutes and try your question again",
+            "Check your internet connection", 
+            "Try refreshing the page",
+            "If the issue continues, please visit us again later"
+          ]
+        },
+        hi: {
+          title: "🔧 सेवा अस्थायी रूप से अनुपलब्ध",
+          text: "हमें खुशी है कि आप हमारी कृषि सलाह सेवा का उपयोग कर रहे हैं, लेकिन अभी हमारे सर्वर में तकनीकी समस्या है। कृपया कुछ मिनट बाद फिर से कोशिश करें। यदि समस्या बनी रहे तो बाद में आएं।",
+          steps: [
+            "2-3 मिनट प्रतीक्षा करें और फिर से प्रयास करें",
+            "अपना इंटरनेट कनेक्शन जांचें",
+            "पेज को रिफ्रेश करने की कोशिश करें", 
+            "यदि समस्या जारी रहे तो कृपया बाद में आएं"
+          ]
+        },
+        ml: {
+          title: "🔧 സേവനം താത്കാലികമായി ലഭ്യമല്ല",
+          text: "ക്ഷമിക്കണം, ഞങ്ങളുടെ കാർഷിക സേവനത്തിൽ ഇപ്പോൾ സാങ്കേതിക പ്രശ്‌നമുണ്ട്. ദയവായി കുറച്ച് മിനിറ്റുകൾക്ക് ശേഷം വീണ്ടും ശ്രമിക്കുക. പ്രശ്‌നം തുടരുകയാണെങ്കിൽ പിന്നീട് വരുക.",
+          steps: [
+            "2-3 മിനിറ്റ് കാത്തിരുന്ന് വീണ്ടും ശ്രമിക്കുക",
+            "നിങ്ങളുടെ ഇന്റർനെറ്റ് കണക്ഷൻ പരിശോധിക്കുക",
+            "പേജ് പുതുക്കാൻ ശ്രമിക്കുക",
+            "പ്രശ്‌നം തുടർന്നാൽ പിന്നീട് വരിക"
+          ]
+        }
+      };
+      
+      const errorMsg = serverErrorMessages[lang] || serverErrorMessages.en;
+      setResult({
+        title: errorMsg.title,
+        text: errorMsg.text,
+        steps: errorMsg.steps,
+        lang: lang
+      });
       setSection("result");
     }
   };
@@ -455,14 +658,78 @@ export default function Index() {
                   }}
                 />
               </div>
-              <Button 
-                variant={speaking ? "destructive" : "secondary"} 
-                onClick={() => speak(result.text)} 
-                aria-label={speaking ? t("stop") : t("listen")}
-                className={speaking ? "animate-pulse" : ""}
-              >
-                <Volume2 /> {speaking ? t("stop") : t("listen")}
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant={speaking ? "destructive" : "secondary"} 
+                  onClick={() => speak(result.text)} 
+                  aria-label={speaking ? t("stop") : t("listen")}
+                  className={speaking ? "animate-pulse" : ""}
+                >
+                  <Volume2 /> {speaking ? t("stop") : t("listen")}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    const voices = speechSynthesis.getVoices();
+                    console.log('=== VOICE DEBUG INFO ===');
+                    console.log('Selected language:', lang);
+                    console.log('Total voices available:', voices.length);
+                    
+                    // Group voices by language
+                    const voicesByLang = voices.reduce((acc, voice) => {
+                      const langCode = voice.lang.substring(0, 2);
+                      if (!acc[langCode]) acc[langCode] = [];
+                      acc[langCode].push(voice);
+                      return acc;
+                    }, {} as Record<string, any[]>);
+                    
+                    console.log('Voices by language:', voicesByLang);
+                    
+                    // Test with current language
+                    const speechMap: Record<string, string> = {
+                      en: "en-US", ml: "ml-IN", hi: "hi-IN", mr: "mr-IN", 
+                      kn: "kn-IN", gu: "gu-IN", te: "te-IN"
+                    };
+                    
+                    const targetLang = speechMap[lang] || "en-US";
+                    const testText = {
+                      'en': 'Hello, this is a test',
+                      'hi': 'नमस्ते, यह एक परीक्षण है',
+                      'ml': 'ഹലോ, ഇത് ഒരു ടെസ്റ്റ് ആണ്',
+                      'mr': 'नमस्कार, ही एक चाचणी आहे',
+                      'kn': 'ನಮಸ್ಕಾರ, ಇದು ಒಂದು ಪರೀಕ್ಷೆ',
+                      'gu': 'નમસ્તે, આ એક ટેસ્ટ છે',
+                      'te': 'హలో, ఇది ఒక పరీక్ష'
+                    };
+                    
+                    const testUtter = new SpeechSynthesisUtterance(testText[lang as keyof typeof testText] || testText['en']);
+                    testUtter.lang = targetLang;
+                    testUtter.rate = 0.8;
+                    testUtter.volume = 1;
+                    
+                    // Find appropriate voice
+                    let voice = voices.find(v => v.lang === targetLang) ||
+                               voices.find(v => v.lang.startsWith(lang)) ||
+                               voices.find(v => v.name.toLowerCase().includes(lang));
+                    
+                    if (voice) {
+                      testUtter.voice = voice;
+                      console.log('Testing with voice:', voice.name, voice.lang);
+                    } else {
+                      console.log('No specific voice found for', lang, 'using default');
+                    }
+                    
+                    testUtter.onstart = () => console.log("✅ Test audio started");
+                    testUtter.onend = () => console.log("✅ Test audio completed");
+                    testUtter.onerror = (e) => console.error("❌ Test audio error:", e);
+                    
+                    speechSynthesis.speak(testUtter);
+                  }}
+                  title="Test voice for current language"
+                >
+                  🎤 Test Voice
+                </Button>
+              </div>
             </div>
             <ol className="list-decimal pl-5 space-y-2 text-foreground/90">
               {result.steps.map((s, i) => (
