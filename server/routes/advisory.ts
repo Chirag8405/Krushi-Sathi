@@ -69,87 +69,45 @@ export const postAdvisory: RequestHandler = async (req, res) => {
       });
 
       // Create detailed and engaging prompt for comprehensive agricultural advice
-      const systemPrompt = `You are Dr. Krishi, a friendly and experienced agricultural expert with 25+ years of field experience across Indian farming systems. You provide detailed, engaging advice that farmers love to read and follow.
+      const systemPrompt = `You are Dr. Krishi, a friendly and experienced agricultural expert with 25+ years of field experience across Indian farming systems.
 
-CRITICAL: Respond ONLY with a valid JSON object in this exact format:
+CRITICAL INSTRUCTION: You MUST respond with ONLY a valid JSON object. Do not include any text before or after the JSON. Start your response with { and end with }.
 
+Required JSON format:
 {
-  "title": "🌱 Engaging, actionable title with emoji (max 60 characters)",
-  "text": "Detailed, well-formatted agricultural advice with emojis, bullet points, and clear sections",
-  "steps": ["🔍 Step 1: Detailed action with timing and method", "💧 Step 2: Specific treatment with quantities", "👀 Step 3: Monitoring signs and frequency", "🛡️ Step 4: Prevention strategy for future"],
+  "title": "🌱 Engaging title with emoji (max 60 chars)",
+  "text": "Detailed agricultural advice with **bold** formatting and bullet points",
+  "steps": ["🔍 Step 1 with emoji and action", "💧 Step 2 with specific method", "👀 Step 3 monitoring", "🛡️ Step 4 prevention"],
   "lang": "${lang}",
   "source": "ai"
 }
 
-FORMATTING REQUIREMENTS for the "text" field:
-✅ Use emojis throughout for visual appeal (🌱🐛💧🔍👨‍🌾💡⚠️✨🛡️💪)
-✅ Structure with bold headings like **🔍 What's Happening:** **💡 Root Cause:** **🛠️ Treatment Plan:**
-✅ Use bullet points with • or numbered lists 1. 2. 3.
-✅ Include encouraging phrases like "Don't worry, this is completely fixable!" or "Many farmers face this issue"
-✅ Make it conversational and friendly like talking to a neighbor
-✅ Add specific quantities, timings, and local materials (neem, cow dung, etc.)
-✅ Include cost estimates in ₹ when helpful
+JSON FORMATTING RULES for "text" field:
+✅ Use **bold** for headings: **Problem Analysis:** **Solutions:** **Prevention:**
+✅ Use • for bullet points (not complex nested formatting)
+✅ Include emojis: 🌱🐛💧🔍👨‍🌾💡⚠️✨🛡️💪
+✅ Keep it conversational: "Don't worry, this is fixable!"
+✅ Include quantities and costs: "₹200 for neem oil"
+✅ Use simple line breaks, avoid complex HTML formatting
+✅ Escape quotes properly in JSON - use single quotes inside or escape double quotes
 
-CONTENT STRUCTURE for "text" field (aim for 400-600 words):
-**🔍 Problem Analysis:**
-• Identify the issue with empathy and understanding
-• Explain what's causing this problem in simple terms
-• Reassure the farmer that this is solvable
+CONTENT STRUCTURE for "text" field (300-500 words max):
+**🔍 Problem:** Identify the issue and reassure it's fixable
+**💡 Cause:** Explain why this happens simply  
+**🛠️ Solutions:** List 2-3 organic treatments with quantities and costs
+**👀 Monitoring:** What to watch for in next 3-7 days
+**🛡️ Prevention:** Future protection tips
+**💪 Encouragement:** Positive, supportive closing
 
-**💡 Why This Happens:**
-• Common causes (weather, season, soil, pests, nutrients)
-• When this typically occurs
-• Risk factors to be aware of
+WRITING STYLE: Warm, personal, simple language, practical tips
 
-**🛠️ Immediate Action Plan:**
-1. **Quick Fix (Today):** Urgent steps to stop damage
-2. **Short-term (This Week):** Treatment implementation
-3. **Medium-term (This Month):** Recovery monitoring
+STEPS field (4 steps, each 15-30 words):
+🔍 Start with emoji + specific action + timing
+� Include quantities and materials (neem, turmeric, etc.)
+� Mention monitoring frequency and signs
+�️ End with prevention tip
 
-**🌿 Organic Solutions (Preferred):**
-• Cost-effective home remedies using local materials
-• Preparation methods with exact quantities
-• Application timing and frequency
-• Expected results and timeline
-
-**⚗️ Alternative Methods:**
-• If organic doesn't work sufficiently
-• Market solutions with cost estimates
-• When to consider chemical backup (last resort)
-
-**👀 Monitoring & Signs:**
-• Daily checks: What to look for
-• Signs of improvement (timeline: 3-7 days)
-• Warning signs that need immediate attention
-• When to seek additional help
-
-**🛡️ Prevention Strategy:**
-• Seasonal preparation tips
-• Soil health maintenance
-• Natural pest deterrents
-• Long-term crop management
-
-**💪 Encouragement & Support:**
-• Positive reinforcement
-• Success timeline expectations
-• Community wisdom and traditional methods
-• Confidence building for the farmer
-
-WRITING STYLE:
-✓ Warm, encouraging, and supportive tone
-✓ Use "you" and "your crops" to be personal  
-✓ Simple language that any farmer can understand
-✓ Include local farming terms and practices
-✓ Add practical tips from years of experience
-✓ Balance traditional wisdom with modern methods
-✓ Make it feel like advice from a trusted friend
-
-STEPS field requirements (each step 20-40 words):
-🔍 Use relevant emojis at the start of each step
-🔍 Include specific timing (morning/evening, daily/weekly)
-🔍 Mention exact quantities and measurements
-🔍 Give clear, actionable instructions
-🔍 Start with most urgent, end with prevention`;
+REMEMBER: Output ONLY valid JSON. No extra text, explanations, or markdown formatting outside the JSON structure.`;
 
       let prompt = systemPrompt + `
 
@@ -247,118 +205,71 @@ Combine your visual analysis with the farmer's question to provide laser-focused
       
       console.log('Raw AI Response:', aiResponse); // Debug log
       
-      // Clean the response thoroughly to get pure JSON
       console.log('Raw AI Response:', aiResponse);
       
-      // Remove markdown formatting and extra text
-      let cleanedResponse = aiResponse
-        .replace(/```json\s*/g, '')
-        .replace(/```\s*/g, '')
-        .replace(/^[^{]*({.*})[^}]*$/s, '$1')  // Extract JSON from surrounding text
-        .trim();
+      // Multiple strategies to extract valid JSON
+      let parsedResponse = null;
       
-      // Try to parse AI response as JSON
+      // Strategy 1: Try parsing as-is (if AI returned clean JSON)
       try {
-        const parsedResponse = JSON.parse(cleanedResponse);
+        parsedResponse = JSON.parse(aiResponse.trim());
+        console.log('✅ Direct JSON parse successful');
+      } catch (e1) {
+        console.log('Direct parse failed, trying cleanup...');
         
-        console.log('Parsed AI Response:', parsedResponse);
+        // Strategy 2: Remove markdown and extra text
+        let cleanedResponse = aiResponse
+          .replace(/```json\s*/g, '')
+          .replace(/```\s*/g, '')
+          .replace(/^[^{]*({.*})[^}]*$/s, '$1')
+          .trim();
         
-        // Validate that we have the required fields from AI
-        if (parsedResponse.title && parsedResponse.text && parsedResponse.steps && Array.isArray(parsedResponse.steps)) {
-          response = {
-            title: parsedResponse.title,
-            text: parsedResponse.text,
-            steps: parsedResponse.steps,
-            lang,
-            source: "ai",
-          };
-          console.log('✅ Using complete AI response');
-        } else {
-          console.log('⚠️ AI response missing some fields, using hybrid approach');
-          // Missing required fields, use template with AI text if available
-          response = {
-            title: parsedResponse.title || titles[lang] || titles.en,
-            text: parsedResponse.text || `${safeQuestion ? `Question: ${safeQuestion}. ` : ""}${intro[lang] || intro.en}`,
-            steps: Array.isArray(parsedResponse.steps) ? parsedResponse.steps : stepsMap[lang] || stepsMap.en,
-            lang,
-            source: "ai",
-          };
-        }
-      } catch (parseError) {
-        console.log('JSON Parse Error:', parseError); // Debug log
-        console.log('Attempting JSON extraction from response...'); // Debug log
-        
-        // Try to extract JSON from the response if it's embedded in text
-        let extractedJson = null;
-        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-        
-        if (jsonMatch) {
-          try {
-            extractedJson = JSON.parse(jsonMatch[0]);
-            console.log('Successfully extracted JSON:', extractedJson); // Debug log
-            
-            if (extractedJson.title && extractedJson.text && extractedJson.steps) {
-              response = {
-                title: extractedJson.title,
-                text: extractedJson.text,
-                steps: extractedJson.steps,
-                lang,
-                source: "ai",
-              };
-            } else {
-              throw new Error('Extracted JSON missing required fields');
-            }
-          } catch (extractError) {
-            console.log('JSON extraction failed:', extractError); // Debug log
-            extractedJson = null; // Make sure it's null for the next check
-          }
-        }
-        
-        // If JSON extraction failed, clean and format the AI text
-        if (!extractedJson) {
-          let cleanText = aiResponse;
+        try {
+          parsedResponse = JSON.parse(cleanedResponse);
+          console.log('✅ Cleaned JSON parse successful');
+        } catch (e2) {
+          console.log('Cleaned parse failed, trying extraction...');
           
-          // Try to extract meaningful content if it looks like JSON
-          if (aiResponse.includes('{') && aiResponse.includes('}')) {
+          // Strategy 3: Extract JSON object more aggressively
+          const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
             try {
-              // Attempt to extract text from malformed JSON
-              const textMatch = aiResponse.match(/"text"\s*:\s*"([^"]+)"/);
-              if (textMatch) {
-                cleanText = textMatch[1];
-              } else {
-                // Fallback: clean up JSON-like formatting
-                cleanText = aiResponse
-                  .replace(/[{}"[\]]/g, '')
-                  .replace(/title\s*:\s*/gi, '')
-                  .replace(/text\s*:\s*/gi, '')
-                  .replace(/steps\s*:\s*/gi, '')
-                  .replace(/lang\s*:\s*/gi, '')
-                  .replace(/source\s*:\s*/gi, '')
-                  .replace(/,\s*$/gm, '')
-                  .trim();
-              }
-            } catch {
-              // If all else fails, use the original response but clean it up
-              cleanText = aiResponse.replace(/[{}"[\]]/g, '').trim();
+              parsedResponse = JSON.parse(jsonMatch[0]);
+              console.log('✅ Extracted JSON parse successful');
+            } catch (e3) {
+              console.log('All JSON parsing strategies failed');
             }
           }
-          
-          // If we don't have valid AI response, return error instead of fallback
-          if (!cleanText) {
-            return res.status(503).json({
-              error: 'AI service returned invalid response. Please try again.',
-              code: 'AI_INVALID_RESPONSE'
-            });
-          }
-          
-          response = {
-            title: "Agricultural Advisory", // Simple fallback title
-            text: cleanText,
-            steps: ["Please try asking your question again for detailed steps"], // Minimal fallback
-            lang,
-            source: "ai",
-          };
         }
+      }
+      
+      // If we successfully parsed JSON, validate and use it
+      if (parsedResponse && parsedResponse.title && parsedResponse.text && parsedResponse.steps && Array.isArray(parsedResponse.steps)) {
+        response = {
+          title: parsedResponse.title,
+          text: parsedResponse.text,
+          steps: parsedResponse.steps,
+          lang,
+          source: "ai",
+        };
+        console.log('✅ Using complete AI response');
+      } else if (parsedResponse) {
+        // Partial parsing success - fill in missing fields
+        console.log('⚠️ AI response missing some fields, using hybrid approach');
+        response = {
+          title: parsedResponse.title || titles[lang] || titles.en,
+          text: parsedResponse.text || `${safeQuestion ? `Question: ${safeQuestion}. ` : ""}${intro[lang] || intro.en}`,
+          steps: Array.isArray(parsedResponse.steps) && parsedResponse.steps.length > 0 ? parsedResponse.steps : stepsMap[lang] || stepsMap.en,
+          lang,
+          source: "ai",
+        };
+      } else {
+        // Complete parsing failure - return error
+        console.log('❌ Failed to parse AI response as JSON');
+        return res.status(503).json({
+          error: 'AI service returned invalid response format. Please try again.',
+          code: 'AI_PARSE_ERROR'
+        });
       }
     } catch (error) {
       console.error('AI generation failed:', error);
