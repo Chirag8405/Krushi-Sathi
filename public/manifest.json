@@ -1,0 +1,47 @@
+{
+  "name": "Krushi Sathi - AI Agricultural Advisory",
+  "short_name": "Krushi Sathi",
+  "description": "AI-powered agricultural advisory system with voice support and multilingual capabilities",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0f9e8",
+  "theme_color": "#4ade80",
+  "orientation": "portrait",
+  "scope": "/",
+  "categories": ["agriculture", "productivity", "education"],
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png", 
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ask Question",
+      "short_name": "Ask",
+      "description": "Ask a farming question",
+      "url": "/?action=ask",
+      "icons": [{ "src": "/favicon.ico", "sizes": "192x192" }]
+    },
+    {
+      "name": "Upload Image",
+      "short_name": "Upload",
+      "description": "Upload crop image for analysis",
+      "url": "/?action=image", 
+      "icons": [{ "src": "/favicon.ico", "sizes": "192x192" }]
+    }
+  ]
+}

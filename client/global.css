@@ -1,0 +1,114 @@
+/** @import must precede all other statements */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /**
+   * Tailwind CSS theme
+   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
+   * A different format will require also updating the theme in tailwind.config.ts.
+  */
+  :root {
+    --background: 36 33% 96%;
+    --foreground: 24 24% 16%;
+
+    --card: 36 33% 98%;
+    --card-foreground: 24 24% 16%;
+
+    --popover: 36 33% 98%;
+    --popover-foreground: 24 24% 16%;
+
+    --primary: 142 45% 30%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 45 78% 85%;
+    --secondary-foreground: 24 24% 16%;
+
+    --muted: 36 20% 92%;
+    --muted-foreground: 26 15% 40%;
+
+    --accent: 48 95% 53%;
+    --accent-foreground: 30 25% 18%;
+
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 30 20% 85%;
+    --input: 30 20% 85%;
+    --ring: 142 45% 30%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 36 33% 96%;
+    --sidebar-foreground: 24 24% 16%;
+    --sidebar-primary: 142 45% 30%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 45 78% 85%;
+    --sidebar-accent-foreground: 24 24% 16%;
+    --sidebar-border: 30 20% 85%;
+    --sidebar-ring: 142 45% 30%;
+
+    /* Brand tokens */
+    --leaf: 142 45% 30%;
+    --soil: 25 35% 35%;
+    --sun: 48 95% 53%;
+    --sky: 200 80% 92%;
+  }
+
+  .dark {
+    --background: 24 20% 10%;
+    --foreground: 60 20% 96%;
+
+    --card: 24 20% 12%;
+    --card-foreground: 60 20% 96%;
+
+    --popover: 24 20% 12%;
+    --popover-foreground: 60 20% 96%;
+
+    --primary: 142 50% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 48 25% 20%;
+    --secondary-foreground: 60 20% 96%;
+
+    --muted: 24 15% 18%;
+    --muted-foreground: 45 10% 70%;
+
+    --accent: 48 95% 53%;
+    --accent-foreground: 24 24% 16%;
+
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 60 20% 96%;
+
+    --border: 24 18% 22%;
+    --input: 24 18% 22%;
+    --ring: 142 50% 40%;
+
+    --sidebar-background: 24 20% 10%;
+    --sidebar-foreground: 60 20% 96%;
+    --sidebar-primary: 142 50% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 24 15% 18%;
+    --sidebar-accent-foreground: 60 20% 96%;
+    --sidebar-border: 24 18% 22%;
+    --sidebar-ring: 142 50% 40%;
+
+    --leaf: 142 50% 40%;
+    --soil: 25 25% 45%;
+    --sun: 48 95% 53%;
+    --sky: 210 60% 18%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
