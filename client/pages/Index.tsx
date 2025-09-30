@@ -2,6 +2,7 @@ import Layout from "@/components/Layout";
 import LoadingSeed from "@/components/LoadingSeed";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/components/LocaleProvider";
+import ReactMarkdown from "react-markdown";
 import {
   AudioLines,
   BookOpen,
@@ -391,15 +392,49 @@ export default function Index() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="font-bold text-xl mb-2">{result.title}</h3>
-                <p className="text-foreground/90 whitespace-pre-wrap mb-3 text-lg">{result.text}</p>
+                <div className="text-foreground/90 mb-3 text-lg leading-relaxed prose prose-slate dark:prose-invert max-w-none prose-headings:text-foreground prose-strong:text-foreground prose-p:text-foreground prose-li:text-foreground">
+                  <ReactMarkdown 
+                    components={{
+                      // Custom components for better styling
+                      h1: ({children}) => <h1 className="text-2xl font-bold text-foreground mb-4">{children}</h1>,
+                      h2: ({children}) => <h2 className="text-xl font-bold text-foreground mb-3">{children}</h2>,
+                      h3: ({children}) => <h3 className="text-lg font-bold text-foreground mb-2">{children}</h3>,
+                      h4: ({children}) => <h4 className="text-lg font-bold text-foreground mb-2">{children}</h4>,
+                      strong: ({children}) => <strong className="font-bold text-foreground">{children}</strong>,
+                      em: ({children}) => <em className="italic text-foreground">{children}</em>,
+                      p: ({children}) => <p className="mb-3 text-foreground">{children}</p>,
+                      ul: ({children}) => <ul className="list-none space-y-1 mb-3">{children}</ul>,
+                      li: ({children}) => (
+                        <li className="flex items-start gap-2">
+                          <span className="text-foreground mt-1">•</span>
+                          <span className="text-foreground flex-1">{children}</span>
+                        </li>
+                      ),
+                    }}
+                  >
+                    {result.text}
+                  </ReactMarkdown>
+                </div>
               </div>
               <Button variant="secondary" onClick={() => speak(result.text)} aria-label={t("listen")}>
                 <Volume2 /> {t("listen")}
               </Button>
             </div>
-            <ol className="list-decimal pl-5 space-y-1 text-foreground/90">
+            <ol className="list-decimal pl-5 space-y-2 text-foreground/90">
               {result.steps.map((s, i) => (
-                <li key={i}>{s}</li>
+                <li key={i} className="text-foreground">
+                  <div className="prose prose-slate dark:prose-invert max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        strong: ({children}) => <strong className="font-bold text-foreground">{children}</strong>,
+                        em: ({children}) => <em className="italic text-foreground">{children}</em>,
+                        p: ({children}) => <span className="text-foreground">{children}</span>,
+                      }}
+                    >
+                      {s}
+                    </ReactMarkdown>
+                  </div>
+                </li>
               ))}
             </ol>
             <div className="flex flex-wrap gap-2 mt-4">
