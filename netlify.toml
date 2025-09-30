@@ -8,8 +8,8 @@
   NPM_FLAGS = "--production=false"
 
 [functions]
-  external_node_modules = ["express", "pg", "@google/generative-ai"]
   node_bundler = "esbuild"
+  included_files = ["server/**", "shared/**"]
 
 # API redirects
 [[redirects]]
